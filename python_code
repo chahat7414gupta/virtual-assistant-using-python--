@@ -1,0 +1,306 @@
+import speech_recognition as sr
+import pyttsx3
+import pyjokes
+import webbrowser
+import tkinter as tk
+import wikipedia
+import wolframalpha
+import randfacts
+import datetime
+import requests
+import os
+import winshell
+import ctypes
+import geocoder
+from geopy.distance import great_circle
+from geopy.geocoders import Nominatim
+from selenium import webdriver
+
+
+
+engine=pyttsx3.init()
+voice_id="HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0"
+engine.setProperty('voice',voice_id)
+engine.setProperty('rate',120)
+
+#some predefined chats
+greetings=["hello","hey","hi"]#list
+wish={"morning":"Good morning mam ","afternoon ":"good afternoon mam ","evening":"Good evening mam","night":"Good night mam "," care":" you too mam "}#dictionary
+quest={"how":"i am having a good day mam,what about you ","fine":" great mam,how can i help you "}
+global answer
+global order
+
+class infow():#selenium implementation
+    def _init_(self):
+        self.driver= webdriver.Chrome(executable_path="D:\\chromedriver_win32\\chromedriver.exe")
+
+    def get_info(self,query):
+        self.query=query
+        self.driver.get(url="https://www.wikipedia.org")
+        searchbox=self.driver.find_element_by_xpath('//*[@id="searchInput"]')
+        searchbox.click()
+        searchbox.send_keys(query)
+        searchbutton=self.driver.find_element_by_xpath('//*[@id="search-form"]/fieldset/button')
+        searchbutton.click()
+    
+    def video_play(self,query):
+        self.query=query
+        self.driver.get(url="https://www.youtube.com/results?search_query=" + query)
+        video=self.driver.find_element_by_xpath('//*[@id="dismissible"]')
+        video.click()
+    
+def speak(audio):
+    engine.say(audio)
+    engine.runAndWait()
+    e1.insert(tk.END,audio+'\n')
+
+#news data    
+ar=[]
+api_address="https://newsapi.org/v2/top-headlines?country=in&apiKey=45bbb0d0fa6341fba715ac9f3b7fb55f"
+json_data=requests.get(api_address).json()
+def news():
+    for i in range(3):
+        ar.append("Number "+ str(i+1)+" news" + json_data["articles"][i]["title"]+".")
+    return ar 
+
+#weather data
+api_address_2 = 'http://api.openweathermap.org/data/2.5/weather?q=Delhi&appid=da7c7c49644b2f4d482ca9b77b76c6eb'
+json_data_2 = requests.get(api_address_2).json()
+
+today_date = datetime.datetime.now()
+
+
+def intro():
+        speak("Today is " +today_date.strftime("%d")+" of "+today_date.strftime("%B")+" And its currently "+(today_date.strftime("%I"))+":"+(today_date.strftime("%M"))+(today_date.strftime("%p")))
+        
+        speak(" what can I do for you? ")
+        
+def GoogleMaps(place):
+        url_place="https://www.google.com/maps/place/" + str(place)
+        geolocator = Nominatim(user_agent="myGeocoder")
+        webbrowser.open(url=url_place)
+        
+        location = geolocator.geocode(place,addressdetails=True)
+        target_latlon= location.latitude,location.longitude
+        location=location.raw['address']
+        
+        current_loc=geocoder.ip('me')
+        current_latlon=current_loc.latlng
+        
+        distance=str(great_circle(current_latlon,target_latlon))
+        distance=str(distance.split(' ',1)[0])
+        distance=round(float(distance),2)
+        
+        speak("city "+ location.get('city','')+ "state " +location.get('state','')+ " country " +location.get('country',''))
+        speak(f"mam,{place} is {distance} kilometer away from your location.")
+       
+        
+
+def wishMe():
+    hour=datetime.datetime.now().hour
+    if hour>=0 and hour<12:
+        speak("Hello,Good Morning mam ,this is Rova,I am your voice assistant")
+        
+    elif hour>=12 and hour<18:
+        speak("Hello,Good Afternoon mam ,this is Rova,I am your voice assistant")
+        
+    else:
+        speak("Hello,Good Evening mam ,this is Rova,I am your voice assistant")
+        
+
+def check():
+    r=sr.Recognizer()
+    with sr.Microphone() as source:
+        audio=r.listen(source) #listening audio 
+    try:
+        order=r.recognize_google(audio,language="en-in")#capture audio and sent to google api engine which audio->textl
+        e2.insert(tk.END,order+'\n') #insert in text area
+        global x
+        x=order.split(' ')#it split whole sentence into words
+    
+    except Exception as e:
+        speak("unable to recognise your voice mam...")
+        return "None"
+    
+    for word in x:
+        if word in wish:
+            answer=wish[word]
+            speak(answer)
+            break
+            
+        elif word in greetings:
+           
+            wishMe()
+            intro()
+            break
+           
+        elif word in quest:
+            answer=quest[word]
+            speak(answer)
+            break
+            
+        elif "joke" in x:
+            nj=pyjokes.get_joke()
+            speak(nj);
+            break;
+       
+        elif "time"in x:
+            strTime=datetime.datetime.now().strftime("%H:%M:%S")
+            speak("mam,current time is ")
+            speak(strTime)
+            break;
+            
+        elif "fact" in x:
+            speak("sure mam ")
+            x=randfacts.getFact()
+            speak("did you know that, "+x)
+            break;
+            
+        elif "play" in x:
+            order=order.replace("play","")
+            assist=infow()
+            speak(f"playing {order} on youtube ")
+            assist.video_play(order)
+            break
+            
+        elif 'stack' in x:
+            speak(" Here you go to Stack Over flow , Happy coding")
+            webbrowser.open("www.stackoverflow.com")  
+            break
+            
+            
+        elif 'YouTube' in x:
+            speak("Here you go to Youtube")
+            webbrowser.open("www.youtube.com")
+            break
+            
+            
+        elif 'created' and 'you' in x:
+            speak("i have been created by bhumika and chahat for their fourth sem minor project")
+            break
+       
+        elif "news" in x:
+            speak("sure mam i will read the news for you ")
+            arr=news()
+            for i in range(len(arr)):
+                speak(arr[i])
+            break
+         
+        elif "who" in x:
+            speak("According to wikipedia ")
+            order=order.replace("who","")
+            answer=wikipedia.summary(order,sentences=1)
+            speak(answer)
+            break
+        
+        elif "where" in x:
+            order = order.replace("where is", "")
+            location = order
+            GoogleMaps(location)
+            break
+ 
+            
+        elif "spotify"  in x:
+            speak(" here you go")
+            webbrowser.open_new(f'https://open.spotify.com/playlist/37i9dQZF1DXd05hd2jmMZL#login')
+            break                  
+
+        elif "Netflix" in x:
+            speak(" opening netfix for you")
+            webbrowser.open_new(f'https://www.netflix.com/in/')
+            break;
+            
+        elif "quit" in x:
+            speak("ok  bye for now, call me when you need something have a good day!")
+            root.destroy()
+            break
+            
+        elif "shutdown" in x:
+            speak("Hold On a Sec ! Your system is on its way to shut down please make sure all the files are saved and closed")
+            os.system("shutdown /s /t 30")
+            break
+                 
+        elif "restart" in x:
+            speak("Hold On a Sec ! Your system is on its way to restart")
+            os.system("shutdown /r /t 10")
+            break
+            
+        elif "lock" and "window" in x:
+            speak("locking the device")
+            ctypes.windll.user32.LockWorkStation()
+            break
+                 
+        elif "empty" and "recycle" in x:
+            winshell.recycle_bin().empty(confirm = False, show_progress = False, sound = True)
+            speak("Recycle Bin Recycled")
+            break
+            
+        elif "PowerPoint"and "presentation" in x:
+            speak("opening Power Point presentation for you")
+            power = r"E:\\ce41\\ce41 projet report\\Final PROJECT PRESENTATION.pptx"
+            os.startfile(power)
+            break
+        
+        elif "vs" in x:
+            speak("opening vs code for you")
+            codepath="C:\\Users\Dell\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+            os.startfile(codepath)
+            break
+            
+        elif "calculate" in x:
+            client = wolframalpha.Client('6XHYW7-PY6HL924Y2')
+            query=order
+            res = client.query(query)
+            speak("Answer of your query is ")
+            output = next(res.results).text
+            speak(output)
+            break
+            
+        elif "what" in x:
+            client = wolframalpha.Client('6XHYW7-PY6HL924Y2')
+            query=order
+            res = client.query(query)
+            speak("Answer of your query is ")
+            output = next(res.results).text
+            speak(output)
+            break
+             
+        elif "weather" in x:
+            client = wolframalpha.Client('6XHYW7-PY6HL924Y2')
+            query=order
+            res = client.query(query)
+            speak(" here you go with all the weather details ")
+            output = next(res.results).text
+            speak(output)
+            break
+        
+      
+        
+        elif "search" or "information" in x:
+            infor=x[2:]
+            speak("searching {} in wikipedia".format(infor))
+            assist=infow()
+            assist.get_info(infor)
+            break
+            # webbrowser.open_new(f'https://www.google.com/search?q={x[2:]}')
+        
+        
+            
+#code for GUI template
+
+root=tk.Tk()#created GUI object root
+root.geometry("1000x800")
+root.title('Rova')
+root.configure(bg="black")
+e1=tk.Text(root) #created a block where output will be shown in root window
+e1.place(x=70,y=145,height=140,width=900) 
+l1=tk.Label(root,text="OUTPUT",bg="yellow") #create label
+l1.place(x=70,y=110,height=20,width=80)
+
+e2=tk.Text(root)#created a block where input will be shown in root window
+e2.place(x=70,y=380,height=140,width=900)
+l2=tk.Label(root,text="YOU SAID",bg="yellow") #create label
+l2.place(x=70,y=340,height=20,width=80)
+b=tk.Button(root,text="speak",bg="red",fg="white",command=check)
+b.place(x=448,y=580,height=50,width=100)
+root.mainloop()
